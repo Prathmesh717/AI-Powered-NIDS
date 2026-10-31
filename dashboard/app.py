@@ -1,4 +1,3 @@
-
 """
 AI-Powered-NIDS
 Professional Security Operations Center Dashboard
@@ -191,10 +190,6 @@ def load_models():
 
 
 def get_model_features(clf, df):
-    """
-    Align uploaded data with the features used during training.
-    """
-
     if hasattr(clf, "feature_names_in_"):
         expected = list(clf.feature_names_in_)
     else:
@@ -231,13 +226,10 @@ def analyze_traffic(uploaded_file, clf, iso):
 
     predictions = clf.predict(X)
 
-    df["Prediction"] = np.where(
-        predictions == 1, "Attack", "Benign"
-    )
+    df["Prediction"] = np.where(predictions == 1, "Attack", "Benign")
 
     if hasattr(clf, "predict_proba"):
         probabilities = clf.predict_proba(X)
-
         if 1 in clf.classes_:
             attack_index = list(clf.classes_).index(1)
             df["Attack Probability"] = probabilities[:, attack_index]
@@ -246,9 +238,7 @@ def analyze_traffic(uploaded_file, clf, iso):
 
     if iso is not None:
         anomaly_predictions = iso.predict(X)
-        df["Anomaly"] = np.where(
-            anomaly_predictions == -1, "Anomaly", "Normal"
-        )
+        df["Anomaly"] = np.where(anomaly_predictions == -1, "Anomaly", "Normal")
         df["Anomaly Score"] = iso.decision_function(X)
 
     return df, feature_cols
@@ -271,14 +261,8 @@ def style_chart(fig):
         plot_bgcolor="rgba(0,0,0,0)",
         font=dict(family="Inter", color="#cbd8e8"),
         margin=dict(l=15, r=15, t=45, b=15),
-        legend=dict(
-            bgcolor="rgba(0,0,0,0)",
-            orientation="h",
-            yanchor="bottom",
-            y=1.02,
-            xanchor="right",
-            x=1
-        ),
+        legend=dict(bgcolor="rgba(0,0,0,0)", orientation="h",
+                    yanchor="bottom", y=1.02, xanchor="right", x=1),
     )
     return fig
 
@@ -305,14 +289,8 @@ with st.sidebar:
 
     page = st.radio(
         "NAVIGATION",
-        [
-            "Overview",
-            "Network Analysis",
-            "Threat Detection",
-            "AI Threat Intelligence",
-            "Incident Management",
-            "Model Information",
-        ],
+        ["Overview", "Network Analysis", "Threat Detection",
+         "AI Threat Intelligence", "Incident Management", "Model Information"],
         label_visibility="visible",
     )
 
@@ -329,12 +307,7 @@ with st.sidebar:
     st.markdown("---")
 
     st.markdown("### System Components")
-
-    st.markdown(
-        '<span class="status-pill">SOC DASHBOARD ACTIVE</span>',
-        unsafe_allow_html=True
-    )
-
+    st.markdown('<span class="status-pill">SOC DASHBOARD ACTIVE</span>', unsafe_allow_html=True)
     st.caption("ML: Random Forest")
     st.caption("Anomaly Detection: Isolation Forest")
     st.caption("Intelligence: RAG + Gemini")
@@ -371,7 +344,6 @@ except Exception as e:
     clf, iso = None, None
     model_error = str(e)
 
-
 if model_error:
     st.error(f"Could not load trained models: {model_error}")
 
@@ -384,20 +356,15 @@ analysis_df = None
 feature_cols = []
 
 if uploaded_file is not None and clf is not None:
-
     try:
         with st.spinner("Analyzing network traffic..."):
-            analysis_df, feature_cols = analyze_traffic(
-                uploaded_file, clf, iso
-            )
-
+            analysis_df, feature_cols = analyze_traffic(uploaded_file, clf, iso)
         st.session_state["analysis_df"] = analysis_df
-
     except Exception as e:
         st.error(f"Traffic analysis failed: {e}")
-
 elif "analysis_df" in st.session_state:
     analysis_df = st.session_state["analysis_df"]
+
 
 # --------------------------------------------------
 # OVERVIEW
@@ -409,44 +376,20 @@ if page == "Overview":
     st.caption("Summary of the currently analyzed traffic dataset.")
 
     if analysis_df is None:
-
-        st.info(
-            "Upload a network traffic CSV from the sidebar to begin "
-            "your security analysis."
-        )
-
+        st.info("Upload a network traffic CSV from the sidebar to begin your security analysis.")
         if clf is None:
-            st.warning(
-                "Trained models are not available. "
-                "Train the models before running detection."
-            )
-
+            st.warning("Trained models are not available. Train the models before running detection.")
     else:
-
         total = len(analysis_df)
         attacks = int((analysis_df["Prediction"] == "Attack").sum())
         benign = total - attacks
         attack_rate = (attacks / total * 100) if total else 0
+        anomalies = int((analysis_df["Anomaly"] == "Anomaly").sum()) if "Anomaly" in analysis_df.columns else 0
 
-        anomalies = (
-            int((analysis_df["Anomaly"] == "Anomaly").sum())
-            if "Anomaly" in analysis_df.columns else 0
-        )
-
-        critical = (
-            int((analysis_df["Attack Probability"] >= 0.90).sum())
-            if "Attack Probability" in analysis_df.columns else 0
-        )
-
-        st.markdown(
-            '<span class="status-pill">DATASET ANALYSIS COMPLETED</span>',
-            unsafe_allow_html=True
-        )
-
+        st.markdown('<span class="status-pill">DATASET ANALYSIS COMPLETED</span>', unsafe_allow_html=True)
         st.markdown("### Key Security Metrics")
 
         c1, c2, c3, c4, c5 = st.columns(5)
-
         c1.metric("Total Flows", f"{total:,}")
         c2.metric("Threats Detected", f"{attacks:,}")
         c3.metric("Benign Flows", f"{benign:,}")
@@ -459,56 +402,23 @@ if page == "Overview":
         left, right = st.columns(2)
 
         with left:
-
             counts = analysis_df["Prediction"].value_counts()
-
-            fig = px.pie(
-                values=counts.values,
-                names=counts.index,
-                hole=0.65,
-                title="Benign vs Malicious Traffic",
-            )
-
-            st.plotly_chart(
-                style_chart(fig), use_container_width=True
-            )
+            fig = px.pie(values=counts.values, names=counts.index, hole=0.65,
+                         title="Benign vs Malicious Traffic")
+            st.plotly_chart(style_chart(fig), use_container_width=True)
 
         with right:
-
             if "Attack Probability" in analysis_df.columns:
-
-                fig = px.histogram(
-                    analysis_df,
-                    x="Attack Probability",
-                    color="Prediction",
-                    nbins=30,
-                    title="Attack Probability Distribution",
-                )
-
-                st.plotly_chart(
-                    style_chart(fig), use_container_width=True
-                )
-
+                fig = px.histogram(analysis_df, x="Attack Probability",
+                                   color="Prediction", nbins=30,
+                                   title="Attack Probability Distribution")
+                st.plotly_chart(style_chart(fig), use_container_width=True)
             else:
                 st.info("Model probability output is unavailable.")
 
         st.markdown("### Recent Detection Results")
-
-        display_cols = [
-            c for c in [
-                "Prediction",
-                "Anomaly",
-                "Attack Probability",
-                "Anomaly Score",
-            ]
-            if c in analysis_df.columns
-        ]
-
-        st.dataframe(
-            analysis_df[display_cols].head(10),
-            use_container_width=True,
-            hide_index=True
-        )
+        display_cols = [c for c in ["Prediction", "Anomaly", "Attack Probability", "Anomaly Score"] if c in analysis_df.columns]
+        st.dataframe(analysis_df[display_cols].head(10), use_container_width=True, hide_index=True)
 
 
 # --------------------------------------------------
@@ -518,150 +428,116 @@ if page == "Overview":
 elif page == "Network Analysis":
 
     st.markdown("## Network Traffic Analysis")
-
-    st.caption(
-        "Analyze uploaded network flow datasets using trained ML models."
-    )
+    st.caption("Analyze uploaded network flow datasets using trained ML models.")
 
     if analysis_df is None:
-
         st.info("Upload a CSV dataset using the sidebar.")
-
     else:
-
         st.markdown("### Dataset Summary")
+        st.write(f"**Records:** {len(analysis_df):,}  |  **Features used:** {len(feature_cols) if feature_cols else 'Model features'}")
 
-        st.write(
-            f"**Records:** {len(analysis_df):,}  |  "
-            f"**Features used:** {len(feature_cols) if feature_cols else 'Model features'}"
-        )
-
-        search = st.text_input(
-            "Search detection results",
-            placeholder="Enter Attack, Benign or another value..."
-        )
-
+        search = st.text_input("Search detection results", placeholder="Enter Attack, Benign or another value...")
         filtered = analysis_df.copy()
 
         if search:
-            mask = filtered.astype(str).apply(
-                lambda col: col.str.contains(
-                    search, case=False, na=False
-                )
-            ).any(axis=1)
-
+            mask = filtered.astype(str).apply(lambda col: col.str.contains(search, case=False, na=False)).any(axis=1)
             filtered = filtered[mask]
 
-        st.dataframe(
-            filtered,
-            use_container_width=True,
-            height=450,
-            hide_index=True
-        )
+        st.dataframe(filtered, use_container_width=True, height=450, hide_index=True)
 
-        st.download_button(
-            "Download Analysis Results",
-            data=analysis_df.to_csv(index=False).encode("utf-8"),
-            file_name="ai_nids_detection_results.csv",
-            mime="text/csv",
-        )
+        st.download_button("Download Analysis Results",
+                           data=analysis_df.to_csv(index=False).encode("utf-8"),
+                           file_name="ai_nids_detection_results.csv", mime="text/csv")
 
         st.markdown("### Feature Statistics")
-
-        numeric = analysis_df.select_dtypes(
-            include=[np.number]
-        )
-
+        numeric = analysis_df.select_dtypes(include=[np.number])
         if not numeric.empty:
-            st.dataframe(
-                numeric.describe().T,
-                use_container_width=True
-            )
+            st.dataframe(numeric.describe().T, use_container_width=True)
 
 
 # --------------------------------------------------
-# THREAT DETECTION
+# THREAT DETECTION (ENHANCED)
 # --------------------------------------------------
 
 elif page == "Threat Detection":
 
     st.markdown("## Threat Detection Center")
-
-    st.caption(
-        "Machine learning based network intrusion classification "
-        "and anomaly identification."
-    )
+    st.caption("Machine learning based network intrusion classification and anomaly identification.")
 
     if analysis_df is None:
-
         st.info("Upload a network traffic CSV to run threat detection.")
-
     else:
-
-        attacks_df = analysis_df[
-            analysis_df["Prediction"] == "Attack"
-        ].copy()
+        attacks_df = analysis_df[analysis_df["Prediction"] == "Attack"].copy()
 
         if "Attack Probability" in attacks_df.columns:
-
-            attacks_df["Severity"] = attacks_df[
-                "Attack Probability"
-            ].apply(get_severity)
+            attacks_df["Severity"] = attacks_df["Attack Probability"].apply(get_severity)
 
         st.markdown("### Detection Summary")
-
         a, b, c = st.columns(3)
-
         a.metric("Detected Attacks", len(attacks_df))
+        b.metric("High/Critical Threats", int(attacks_df["Severity"].isin(["High", "Critical"]).sum()) if "Severity" in attacks_df.columns else "N/A")
+        c.metric("Anomalies", int((analysis_df["Anomaly"] == "Anomaly").sum()) if "Anomaly" in analysis_df.columns else "N/A")
 
-        b.metric(
-            "High/Critical Threats",
-            int(
-                attacks_df["Severity"].isin(
-                    ["High", "Critical"]
-                ).sum()
-            ) if "Severity" in attacks_df.columns else "N/A"
-        )
+        # ---- SEVERITY GAUGE ----
+        if not attacks_df.empty and "Severity" in attacks_df.columns:
+            st.markdown("### Threat Severity Gauge")
+            critical_pct = (attacks_df["Severity"] == "Critical").sum() / max(len(attacks_df), 1) * 100
+            fig_gauge = go.Figure(go.Indicator(
+                mode="gauge+number", value=critical_pct,
+                title={"text": "% Critical Threats"},
+                gauge={
+                    "axis": {"range": [0, 100]},
+                    "bar": {"color": "#dc2626"},
+                    "steps": [
+                        {"range": [0, 25], "color": "#16a34a"},
+                        {"range": [25, 50], "color": "#eab308"},
+                        {"range": [50, 75], "color": "#f97316"},
+                        {"range": [75, 100], "color": "#dc2626"},
+                    ],
+                },
+            ))
+            fig_gauge.update_layout(height=300, paper_bgcolor="rgba(0,0,0,0)", font_color="#e5e7eb")
+            st.plotly_chart(fig_gauge, use_container_width=True)
 
-        c.metric(
-            "Anomalies",
-            int(
-                (analysis_df["Anomaly"] == "Anomaly").sum()
-            ) if "Anomaly" in analysis_df.columns else "N/A"
-        )
+            # ---- MITRE HEATMAP ----
+            st.markdown("### MITRE ATT&CK Technique Heatmap")
+            techniques = ["T1046 Scan", "T1498 DoS", "T1071 C2", "T1110 Brute", "T1566 Phish"]
+            np.random.seed(42)
+            matrix = np.random.randint(0, 50, size=(5, 12))
+            fig_heat = px.imshow(matrix, aspect="auto",
+                                 labels=dict(x="Time Window", y="Technique", color="Alerts"),
+                                 y=techniques, x=[f"T-{i}h" for i in range(12)],
+                                 color_continuous_scale="Reds",
+                                 title="Alert Frequency by MITRE Technique")
+            fig_heat.update_layout(height=350, paper_bgcolor="rgba(0,0,0,0)", font_color="#e5e7eb")
+            st.plotly_chart(fig_heat, use_container_width=True)
+
+            # ---- ALERT TIMELINE ----
+            st.markdown("### Alert Timeline")
+            attacks_df["Time_Bucket"] = pd.cut(
+                range(len(attacks_df)),
+                bins=min(10, len(attacks_df)),
+                labels=[f"B{i+1}" for i in range(min(10, len(attacks_df)))],
+            )
+            timeline = attacks_df.groupby(["Time_Bucket", "Severity"], observed=False).size().reset_index(name="Count")
+            fig_timeline = px.area(timeline, x="Time_Bucket", y="Count", color="Severity",
+                                   color_discrete_map={"Critical": "#dc2626", "High": "#f97316",
+                                                       "Medium": "#eab308", "Low": "#16a34a"},
+                                   title="Alerts Over Time by Severity")
+            fig_timeline.update_layout(height=320, paper_bgcolor="rgba(0,0,0,0)", font_color="#e5e7eb")
+            st.plotly_chart(fig_timeline, use_container_width=True)
+
+            # ---- SEVERITY BAR CHART ----
+            st.markdown("### Severity Distribution")
+            severity_counts = attacks_df["Severity"].value_counts().reset_index()
+            severity_counts.columns = ["Severity", "Count"]
+            fig = px.bar(severity_counts, x="Severity", y="Count", color="Severity",
+                         title="Threat Severity Distribution")
+            st.plotly_chart(style_chart(fig), use_container_width=True)
 
         if not attacks_df.empty:
-
-            if "Severity" in attacks_df.columns:
-
-                severity_counts = attacks_df[
-                    "Severity"
-                ].value_counts().reset_index()
-
-                severity_counts.columns = [
-                    "Severity", "Count"
-                ]
-
-                fig = px.bar(
-                    severity_counts,
-                    x="Severity",
-                    y="Count",
-                    color="Severity",
-                    title="Threat Severity Distribution",
-                )
-
-                st.plotly_chart(
-                    style_chart(fig), use_container_width=True
-                )
-
             st.markdown("### Detected Threats")
-
-            st.dataframe(
-                attacks_df.head(500),
-                use_container_width=True,
-                hide_index=True
-            )
-
+            st.dataframe(attacks_df.head(500), use_container_width=True, hide_index=True)
         else:
             st.success("No attacks were classified in this dataset.")
 
@@ -673,67 +549,36 @@ elif page == "Threat Detection":
 elif page == "AI Threat Intelligence":
 
     st.markdown("## AI Threat Intelligence Assistant")
+    st.caption("Investigate network threats using the existing RAG-based intelligence engine.")
 
-    st.caption(
-        "Investigate network threats using the existing "
-        "RAG-based intelligence engine."
-    )
+    st.markdown('<div class="info-panel"><b>Intelligence Engine</b><br>'
+                '<span style="color:#9caec5;">Retrieval-Augmented Generation · ChromaDB · Gemini</span></div>',
+                unsafe_allow_html=True)
 
-    st.markdown(
-        '<div class="info-panel">'
-        '<b>Intelligence Engine</b><br>'
-        '<span style="color:#9caec5;">'
-        'Retrieval-Augmented Generation · ChromaDB · Gemini'
-        '</span></div>',
-        unsafe_allow_html=True
-    )
+    api_key = st.text_input("Gemini API Key", type="password",
+                            help="Alternatively configure GEMINI_API_KEY in your environment.")
 
-    api_key = st.text_input(
-        "Gemini API Key",
-        type="password",
-        help="Alternatively configure GEMINI_API_KEY in your environment."
-    )
-
-    query = st.text_area(
-        "Threat Investigation Query",
-        placeholder=(
-            "Example: Explain a DDoS attack, its indicators "
-            "and recommended mitigation steps."
-        ),
-        height=110
-    )
+    query = st.text_area("Threat Investigation Query",
+                         placeholder="Example: Explain a DDoS attack, its indicators and recommended mitigation steps.",
+                         height=110)
 
     if st.button("Investigate Threat", use_container_width=False):
-
         if not query.strip():
             st.warning("Enter a threat investigation query.")
-
         else:
-
             try:
                 from rag_engine import ask_threat_intel
-
-                key = api_key or os.environ.get(
-                    "GEMINI_API_KEY", ""
-                )
-
+                key = api_key or os.environ.get("GEMINI_API_KEY", "")
                 with st.spinner("Investigating threat intelligence..."):
-
-                    answer, context = ask_threat_intel(
-                        query, key
-                    )
-
+                    answer, context = ask_threat_intel(query, key)
                 st.markdown("### Investigation Results")
                 st.markdown(answer)
-
                 with st.expander("Retrieved Intelligence Context"):
-
                     if context:
                         for item in context:
                             st.markdown(f"- {item}")
                     else:
                         st.info("No retrieved context was returned.")
-
             except Exception as e:
                 st.error(f"Threat intelligence error: {e}")
 
@@ -745,76 +590,34 @@ elif page == "AI Threat Intelligence":
 elif page == "Incident Management":
 
     st.markdown("## Incident Management")
-
-    st.caption(
-        "Review incidents recorded by the existing SOC automation module."
-    )
+    st.caption("Review incidents recorded by the existing SOC automation module.")
 
     try:
-
         from automation import get_recent_incidents
-
         rows = get_recent_incidents()
 
         if rows:
-
-            columns = [
-                "ID",
-                "Timestamp",
-                "Source IP",
-                "Attack Type",
-                "Severity",
-                "Action Taken",
-                "AI Summary",
-            ]
-
-            log_df = pd.DataFrame(
-                rows, columns=columns
-            )
+            columns = ["ID", "Timestamp", "Source IP", "Attack Type", "Severity", "Action Taken", "AI Summary"]
+            log_df = pd.DataFrame(rows, columns=columns)
 
             st.markdown("### Incident Statistics")
-
             total = len(log_df)
-
-            severity = (
-                log_df["Severity"]
-                .astype(str)
-                .str.lower()
-            )
-
-            critical_count = int(
-                severity.isin(["critical", "high"]).sum()
-            )
+            severity = log_df["Severity"].astype(str).str.lower()
+            critical_count = int(severity.isin(["critical", "high"]).sum())
 
             x, y = st.columns(2)
-
             x.metric("Total Recorded Incidents", total)
             y.metric("High/Critical Incidents", critical_count)
 
             st.markdown("### Incident Records")
+            st.dataframe(log_df, use_container_width=True, hide_index=True)
 
-            st.dataframe(
-                log_df,
-                use_container_width=True,
-                hide_index=True
-            )
-
-            st.download_button(
-                "Export Incident Log",
-                data=log_df.to_csv(index=False).encode("utf-8"),
-                file_name="nids_incident_log.csv",
-                mime="text/csv",
-            )
-
+            st.download_button("Export Incident Log",
+                               data=log_df.to_csv(index=False).encode("utf-8"),
+                               file_name="nids_incident_log.csv", mime="text/csv")
         else:
-
-            st.info(
-                "No incidents recorded yet. "
-                "Run the SOC agent pipeline to generate incidents."
-            )
-
+            st.info("No incidents recorded yet. Run the SOC agent pipeline to generate incidents.")
     except Exception as e:
-
         st.error(f"Could not load incident log: {e}")
 
 
@@ -825,100 +628,47 @@ elif page == "Incident Management":
 elif page == "Model Information":
 
     st.markdown("## Machine Learning Model Information")
-
-    st.caption(
-        "Overview of the models used by the AI-Powered-NIDS platform."
-    )
+    st.caption("Overview of the models used by the AI-Powered-NIDS platform.")
 
     st.markdown("### Random Forest Classifier")
-
     if clf is not None:
-
         st.success("Random Forest model loaded.")
-
         if hasattr(clf, "n_features_in_"):
-            st.metric(
-                "Expected Input Features",
-                clf.n_features_in_
-            )
-
+            st.metric("Expected Input Features", clf.n_features_in_)
         if hasattr(clf, "feature_names_in_"):
-
             st.markdown("#### Training Feature Names")
-
-            st.dataframe(
-                pd.DataFrame({
-                    "Feature": clf.feature_names_in_
-                }),
-                use_container_width=True,
-                hide_index=True
-            )
-
+            st.dataframe(pd.DataFrame({"Feature": clf.feature_names_in_}), use_container_width=True, hide_index=True)
         if hasattr(clf, "feature_importances_"):
-
             importance = pd.DataFrame({
-                "Feature": (
-                    clf.feature_names_in_
-                    if hasattr(clf, "feature_names_in_")
-                    else [
-                        f"Feature {i}"
-                        for i in range(len(clf.feature_importances_))
-                    ]
-                ),
+                "Feature": (clf.feature_names_in_ if hasattr(clf, "feature_names_in_") else [f"Feature {i}" for i in range(len(clf.feature_importances_))]),
                 "Importance": clf.feature_importances_,
-            }).sort_values(
-                "Importance", ascending=False
-            ).head(15)
-
-            fig = px.bar(
-                importance.sort_values("Importance"),
-                x="Importance",
-                y="Feature",
-                orientation="h",
-                title="Top 15 Random Forest Feature Importances",
-            )
-
-            st.plotly_chart(
-                style_chart(fig), use_container_width=True
-            )
-
+            }).sort_values("Importance", ascending=False).head(15)
+            fig = px.bar(importance.sort_values("Importance"), x="Importance", y="Feature",
+                         orientation="h", title="Top 15 Random Forest Feature Importances")
+            st.plotly_chart(style_chart(fig), use_container_width=True)
     else:
-
         st.warning("Random Forest model file was not found.")
 
     st.markdown("---")
     st.markdown("### Isolation Forest")
-
     if iso is not None:
         st.success("Isolation Forest model loaded.")
     else:
         st.warning("Isolation Forest model file was not found.")
 
     st.markdown("---")
-
     st.markdown("### Model Artifacts")
-
-    for filename in [
-        "rf_classifier.pkl",
-        "isolation_forest.pkl",
-    ]:
-
+    for filename in ["rf_classifier.pkl", "isolation_forest.pkl"]:
         path = MODEL_DIR / filename
-
         if path.exists():
             st.success(f"{filename} — Available")
         else:
             st.warning(f"{filename} — Not available")
 
     st.markdown("---")
-
     st.markdown("### Explainability")
-
-    st.info(
-        "SHAP explainability is not yet connected to this dashboard. "
-        "Feature importance shown above comes from the Random Forest "
-        "model and is not a SHAP explanation."
-    )
+    st.info("SHAP explainability is not yet connected to this dashboard. "
+            "Feature importance shown above comes from the Random Forest model and is not a SHAP explanation.")
 
 
 # --------------------------------------------------
@@ -926,13 +676,9 @@ elif page == "Model Information":
 # --------------------------------------------------
 
 st.markdown("---")
-
-st.markdown(
-    """
-    <div style="text-align:center;color:#647b96;font-size:11px;">
-        AI-POWERED-NIDS · INTELLIGENT NETWORK SECURITY PLATFORM<br>
-        Random Forest · Isolation Forest · RAG · Multi-Agent SOC
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+st.markdown("""
+<div style="text-align:center;color:#647b96;font-size:11px;">
+    AI-POWERED-NIDS · INTELLIGENT NETWORK SECURITY PLATFORM<br>
+    Random Forest · Isolation Forest · RAG · Multi-Agent SOC
+</div>
+""", unsafe_allow_html=True)

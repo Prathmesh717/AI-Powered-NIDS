@@ -89,9 +89,7 @@ run_pipeline(features_row, source_ip="192.168.1.10", gemini_api_key="YOUR_KEY")
 
 This project uses [CICIDS2017](https://www.unb.ca/cic/datasets/ids-2017.html),
 a labeled network intrusion dataset created by the Canadian Institute for
-Cybersecurity. It is not included in this repo due to size — download it
-separately and place it in `data/`.
+Cybersecurity.
 
 ## Author
-
 Prathmesh Aghor

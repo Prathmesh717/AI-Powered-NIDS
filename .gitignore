@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+.env.*
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Data and large files
+data/**/*.csv
+data/**/*.zip
+*.pcap
+*.pcapng
+
+# Generated models
+models/*.pkl
+models/*.joblib
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+incidents.db
